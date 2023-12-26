@@ -16,9 +16,17 @@ The main purpose of an HSM is to secure cryptographic keys and operations within
 
 ## Install dependencies
 
-- Install yubi-shell: [download page](https://developers.yubico.com/yubihsm-shell/Releases/)
+First, you need to install the `yubihsm2-sdk`.
+
+The SDK package, including all the tools, can be fetched from here: https://developers.yubico.com/YubiHSM2/Releases/
 
 ### MacOS
+
+Install (`brew`):
+
+```shell
+brew install yubihsm2-sdk
+```
 
 If you don't know where the `yubihsm_pkcs11.dylib` is located, just do:
 
@@ -26,9 +34,38 @@ If you don't know where the `yubihsm_pkcs11.dylib` is located, just do:
 sudo find /usr -name "yubihsm_*.dylib" -print
 ```
 
-### Linux
+### Linux (Ubuntu)
 
-TBD
+Go the [SDK release website](https://developers.yubico.com/YubiHSM2/Releases/), and select the package that is aligned to your Linux distro and version. For example, if you have Ubuntu 22.04, you will choose the file [`yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz`](https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz).
+
+After the download, extract it:
+
+```shell
+tar -xvzf yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz
+cd yubihsm2-sdk
+```
+
+Install:
+
+```
+apt --fix-broken -y install $(ls ./*.deb | grep -v './libyubihsm-dev')
+```
+
+This command will install all `*.deb` files with the exception of the `libyubihsm-dev`, which is not strictly necessary.
+
+You might need to add a `udev` rule. Create the file `/etc/udev/rules.d/` and add the following content:
+
+```conf
+# This udev file should be used with udev 188 and newer
+ACTION!="add|change", GOTO="yubihsm2_connector_end"
+
+# Yubico YubiHSM 2
+# The OWNER attribute here has to match the uid of the process running the Connector
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1050", ATTRS{idProduct}=="0030", OWNER="yubihsm-connector"
+
+LABEL="yubihsm2_connector_end"
+```
+
 
 ## Architecture
 
@@ -60,7 +97,7 @@ Install:
 yubihsm-connector install
 ```
 
-Then, 
+Then, to start it:
 
 ```shell
 sudo yubihsm-connector --config yubihsm-connector-config.yaml start
@@ -68,13 +105,34 @@ sudo yubihsm-connector --config yubihsm-connector-config.yaml start
 
 ## Useful commands
 
-```shell
-yubihsm-shell
-```
+* Start the `yubihsm-shell` in the interactive mode:
 
-```shell
-yubihsm-shell --authkey=1 --password=password --outformat=hex --action=list-objects
-```
+  ```shell
+  yubihsm-shell
+  ```
+
+  Then you can connect and create a session:
+
+  ```
+  yubihsm> connect
+  Session keepalive set up to run every 15 seconds
+  yubihsm> session open 1 password
+  Created session 0
+  ```
+
+  Then, you can, for example, list all objects:
+
+  ```
+  yubihsm> list objects 0
+  Found 1 object(s)
+  id: 0x0001, type: authentication-key, algo: aes128-yubico-authentication, sequence: 0, label: DEFAULT AUTHKEY CHANGE THIS ASAP
+  ```
+
+* You can also run the `yubihsm-shell` in a non-interactive mode, specifying what you want todo (e.g., actions) directly in the command line:
+
+  ```shell
+  yubihsm-shell --authkey=1 --password=password --outformat=hex --action=list-objects
+  ```
 
 ## TODOs
 
