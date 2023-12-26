@@ -66,7 +66,6 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="1050", ATTRS{idProduct}=="0030", OWNER="yubi
 LABEL="yubihsm2_connector_end"
 ```
 
-
 ## Architecture
 
 In order to better understand the role of all the components and how they communicate, the following picture depicts a high-level architecture.
@@ -80,8 +79,6 @@ Important points:
 * An advantage of using PKCS#11 standard to communicate with an HSM is interoperability. Therefore, it doesn't matter what exactly is behind the PKCS#11 interface, since it can be easily replaced without affecting the application implementation.
 
 ## YubiHSM Connector
-
-How to configure and stuff
 
 From the developer portal at Yubi website:
 
@@ -101,6 +98,23 @@ Then, to start it:
 
 ```shell
 sudo yubihsm-connector --config yubihsm-connector-config.yaml start
+```
+
+You might want to check if the `yubihsm-connector` is successfully running by using `curl`:
+
+```shell
+curl -v http://localhost:12345/connector/status
+```
+
+You should see something like this with a `HTTP 200` response:
+
+```conf
+status=OK
+serial=*
+version=3.0.4
+pid=10276
+address=localhost
+port=12345
 ```
 
 ## Useful commands
