@@ -10,7 +10,7 @@ The main purpose of an HSM is to secure cryptographic keys and operations within
 
 👉 HSMs are specifically designed to protect the lifecycle of cryptographic keys. Their tamper-resistant physical design ensures that sensitive keys are never exposed outside the module.
 
-👉 FIPS (Federal Information Processing Standards) is developed by NIST (National Institute of Standards and Technology), a part of the U.S. Department of Commerce. FIPS standards are issued to establish requirements for various purposes such as ensuring computer security and interoperability.
+👉 [FIPS](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards) (Federal Information Processing Standards) is developed by [NIST](https://www.nist.gov) (National Institute of Standards and Technology), a part of the [U.S. Department of Commerce](https://www.commerce.gov). FIPS standards are issued to establish requirements for various purposes such as ensuring computer security and interoperability.
 
 👉 [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) product is certified with [FIPS 140-2, Level 3](https://en.wikipedia.org/wiki/FIPS_140-2).
 
@@ -148,10 +148,85 @@ port=12345
   yubihsm-shell --authkey=1 --password=password --outformat=hex --action=list-objects
   ```
 
+## Scenario for key set-up
+
+Let's imagine that you just bought the YubiHSM2 FIPS and would like to set-up the following:
+
+- Generate an asymmetric key (secp256r1) that will never leave the HSM
+- Enable this key to sign data
+
+> 🚨**IMPORTANT**🚨: it's important to read [Core Concepts](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html) before you start. Make sure you understand what is an [Object](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#object-id), [Capability](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#capability) (including "Delegated Capabilities"), and [Domain](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#domain).
+
+### Setting up a new Authentication Key
+
+Set-up a new auth key:
+
+```shell
+yubihsm-shell --authkey 1 --password password --outformat base64 -a put-authentication-key -i 0x0002 -l hsm-go-test -d 2 -c generate-asymmetric-key,export-wrapped,get-pseudo-random,put-wrap-key,import-wrapped,delete-asymmetric-key,sign-ecdsa --delegated sign-ecdsa,exportable-under-wrap,export-wrapped,import-wrapped --new-password newpassword123
+```
+
+Details:
+* `-i 0x0002`: we're setting, by ourselves, the identifier of the object to `0x0002`. If you leave the `-i` param as  `0`, then a new one will be automatically assigned for you.
+* `-d 2`: means that this authentication key is valid in the domain `2`.
+
+> 🚨**IMPORTANT**🚨: the default authentication key (id: `0x0001`) should be deleted.
+
+### Generate a key for signing
+
+```shell
+yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a generate-asymmetric-key -i 0 -l hsm-go-test-key1 -d 2 -c sign-ecdsa -A ecp256
+```
+
+Returns:
+
+```
+Generated Asymmetric key 0x13db
+```
+
+```shell
+yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a list-objects
+```
+
+Sign (and output to `signature.b64`):
+
+```shell
+cat data.txt | yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a sign-ecdsa -i 0x13db -A ecdsa-sha256
+```
+
+Get public key (and output to `asymmetric_key.pub`):
+
+```shell
+yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a get-public-key -i 0x13db > asymmetric_key.pub
+```
+
+Convert the `signature.b64` to a binary format using `base64` cmd tool, and output to `signature.bin`:
+
+  * If you're in MacOS:
+  
+    ```shell
+    base64 -d -i signature.b64 > signature.bin
+    ```
+
+  * If you're in Linux:
+
+    ```shell
+    base64 -d signature.b64 > signature.bin
+    ```
+
+Verify the signature (from `signature.bin`) using `openssl`:
+
+```shell
+openssl dgst -sha256 -signature signature.bin -verify asymmetric_key.pub data.txt
+```
+
 ## TODOs
 
-- [ ] Suggest reading the following:
-  - https://developers.yubico.com/YubiHSM2/Usage_Guides/YubiHSM_quick_start_tutorial.html
-  - https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-quick-start.html
-- [ ] Docker container to install yubihsm SDK and shell
-- [ ] TBD.
+- [ ] Clarify what's the best set-up in terms of auth key, audit key, and wrap key. Maybe a superior set-up is to have 3 keys with different roles.
+- [ ] Clarify what's the best way to set-up the wrap key and backups.
+- [ ] Docker image with all the tools from yubihsm SDK
+
+## Acknowledgements and References
+
+Some parts of this README were strongly based on the [user guide](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-quick-start.html) provided by Yubico. They have well-written docs, no doubts. However, by re-writing some steps -- which are already part of the docs, but in a scattered manner -- made me better digest and explain details more clearly. I hope that's also the case for you. 😉
+
+Also, thanks for [AxLabs](https://axlabs.com) to provide me the opportunity to play with an YubiHSM2 FIPS. 🙏🥳
