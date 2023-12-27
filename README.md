@@ -76,7 +76,7 @@ Important points:
 
 * The logical representation of nodes (i.e., machines) is just an example. All the components places within `Node N`, `Node C1`, and `Node C2`, can be placed in a single node/machine. The separation between 3 different nodes is just for understanding purposes -- mainly to highlight that `Client 2` doesn't require, e.g., `yubihsm-shell`, and that `Client 1` doesn't require, e.g., `yubihsm_pkcs11.so`, and so on.
 * The native libraries (green), the connector (purple), and `Client 1` (blue), are distributed with the [YubiHSM2 SDK](https://developers.yubico.com/YubiHSM2/Releases/).
-* An advantage of using PKCS#11 standard to communicate with an HSM is interoperability. Therefore, it doesn't matter what exactly is behind the PKCS#11 interface, since it can be easily replaced without affecting the application implementation.
+* An advantage of using [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11) to communicate with an HSM is interoperability. Therefore, it doesn't matter what exactly is behind the PKCS#11 interface, since it can be easily replaced without affecting the application implementation.
 
 ## YubiHSM Connector
 
@@ -171,7 +171,9 @@ Details:
 
 > 🚨**IMPORTANT**🚨: the default authentication key (id: `0x0001`) should be deleted.
 
-### Generate a key for signing
+### Generate a key for signing & signning data
+
+Generate the key (`ecdsa`, `secp256r1`):
 
 ```shell
 yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a generate-asymmetric-key -i 0 -l hsm-go-test-key1 -d 2 -c sign-ecdsa -A ecp256
@@ -183,11 +185,13 @@ Returns:
 Generated Asymmetric key 0x13db
 ```
 
+List all the objects (just to check if the key was created):
+
 ```shell
 yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a list-objects
 ```
 
-Sign (and output to `signature.b64`):
+Sign the data from the `data.txt` file (and output to `signature.b64`):
 
 ```shell
 cat data.txt | yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a sign-ecdsa -i 0x13db -A ecdsa-sha256
@@ -218,6 +222,31 @@ Verify the signature (from `signature.bin`) using `openssl`:
 ```shell
 openssl dgst -sha256 -signature signature.bin -verify asymmetric_key.pub data.txt
 ```
+
+## Signing using the Golang code
+
+Make sure you take a look at the `.env.template` and the `const` section of the `main.go` file. If you would like to change any default value, the easiest way is to create a `.env` file and just override the varibales you need. All the others will get the default value.
+
+The Golang example code uses [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11).
+
+Run:
+
+```shell
+go run main.go
+```
+
+In summary, this is what `main.go` does:
+- List all objects (keys)
+- Fetch the private key object (i.e., object identifier)
+- Test whether the private key value can be fetched (nooooo! 😅)
+- Fetch the public key object (i.e., object identifier)
+- Prints the public key (hex and base64)
+- Requests a signature to the HSM (using `data.txt`)
+- Prints the signature (hex and base64)
+- Prints the curve based on the public key
+- Verifies the signature based on the public key ✅ 🥳
+
+> 🚨**IMPORTANT**🚨: DO NOT USE THIS CODE IN PRODUCTION. This is just an example and was done in the "quick and dirty" mode. 😅
 
 ## TODOs
 
