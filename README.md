@@ -1,34 +1,34 @@
 # Go example for YubiHSM2 FIPS
 
-This repo laid the groundwork about how to set-up and interact with [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) using [Golang](https://go.dev/). This repository also intends to document architectural trade-offs and technical challenges.
+This repo lays the groundwork for setting up and interacting with the [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) using [Golang](https://go.dev/). It also documents architectural trade-offs and technical challenges.
 
- ## What the f*** is an HSM?
+ ## What the heck is an HSM?
 
-A Hardware Security Module (HSM) is a physical computing device that safeguards and manages digital keys for strong authentication and provides crypto-processing. HSM traditionally comes in the form of a plug-in or an external device that attaches directly to a computer or network server.
+A Hardware Security Module (HSM) is a physical computing device that safeguards and manages digital keys for strong authentication and provides crypto-processing. HSM traditionally comes in the form of a plug-in cards or an external device that attaches directly to a computer or network server.
 
 The main purpose of an HSM is to secure cryptographic keys and operations within the device, offering a higher level of security than software-based management because the keys are less susceptible to theft or unauthorized access.
 
 👉 HSMs are specifically designed to protect the lifecycle of cryptographic keys. Their tamper-resistant physical design ensures that sensitive keys are never exposed outside the module.
 
-👉 [FIPS](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards) (Federal Information Processing Standards) is developed by [NIST](https://www.nist.gov) (National Institute of Standards and Technology), a part of the [U.S. Department of Commerce](https://www.commerce.gov). FIPS standards are issued to establish requirements for various purposes such as ensuring computer security and interoperability.
+👉 [FIPS](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards) (Federal Information Processing Standards) is developed by [NIST](https://www.nist.gov) (National Institute of Standards and Technology), part of the [U.S. Department of Commerce](https://www.commerce.gov). FIPS standards are issued to establish requirements for various purposes, such as ensuring computer security and interoperability.
 
 👉 [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) product is certified with [FIPS 140-2, Level 3](https://en.wikipedia.org/wiki/FIPS_140-2).
 
 ## Install dependencies
 
-First, you need to install the `yubihsm2-sdk`.
+First, install the `yubihsm2-sdk`.
 
-The SDK package, including all the tools, can be fetched from here: https://developers.yubico.com/YubiHSM2/Releases/
+You can fetch the SDK package, including all tools, from here: https://developers.yubico.com/YubiHSM2/Releases/
 
 ### MacOS
 
-Install (`brew`):
+To install (`brew`):
 
 ```shell
 brew install yubihsm2-sdk
 ```
 
-If you don't know where the `yubihsm_pkcs11.dylib` is located, just do:
+If you don't know where the `yubihsm_pkcs11.dylib` is located, you can use:
 
 ```shell
 sudo find /usr -name "yubihsm_*.dylib" -print
@@ -36,22 +36,22 @@ sudo find /usr -name "yubihsm_*.dylib" -print
 
 ### Linux (Ubuntu)
 
-Go the [SDK release website](https://developers.yubico.com/YubiHSM2/Releases/), and select the package that is aligned to your Linux distro and version. For example, if you have Ubuntu 22.04, you will choose the file [`yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz`](https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz).
+Visit the [SDK release website](https://developers.yubico.com/YubiHSM2/Releases/) and select the package that is aligned to your Linux distro and version. For example, for Ubuntu 22.04, choose the file [`yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz`](https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz).
 
-After the download, extract it:
+After downloading, extract it:
 
 ```shell
 tar -xvzf yubihsm2-sdk-2023-11-ubuntu2204-amd64.tar.gz
 cd yubihsm2-sdk
 ```
 
-Install:
+To install:
 
 ```
 apt --fix-broken -y install $(ls ./*.deb | grep -v './libyubihsm-dev')
 ```
 
-This command will install all `*.deb` files with the exception of the `libyubihsm-dev`, which is not strictly necessary.
+This command installs all `*.deb` files except the `libyubihsm-dev` one, which is not strictly necessary.
 
 You might need to add a `udev` rule. Create the file `/etc/udev/rules.d/` and add the following content:
 
@@ -68,45 +68,45 @@ LABEL="yubihsm2_connector_end"
 
 ## Architecture
 
-In order to better understand the role of all the components and how they communicate, the following picture depicts a high-level architecture.
+To better understand the role of all components and how they communicate, the following picture depicts a high-level architecture.
 
 ![Architecture Diagram](./docs/yubihsm-architecture.png)
 
 Important points:
 
-* The logical representation of nodes (i.e., machines) is just an example. All the components places within `Node N`, `Node C1`, and `Node C2`, can be placed in a single node/machine. The separation between 3 different nodes is just for understanding purposes -- mainly to highlight that `Client 2` doesn't require, e.g., `yubihsm-shell`, and that `Client 1` doesn't require, e.g., `yubihsm_pkcs11.so`, and so on.
-* The native libraries (green), the connector (purple), and `Client 1` (blue), are distributed with the [YubiHSM2 SDK](https://developers.yubico.com/YubiHSM2/Releases/).
-* An advantage of using [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11) to communicate with an HSM is interoperability. Therefore, it doesn't matter what exactly is behind the PKCS#11 interface, since it can be easily replaced without affecting the application implementation.
+* The logical representation of nodes (i.e., machines) is just an example. All components placed within `Node N`, `Node C1`, and `Node C2`, can be on a single node/machine. The separation between 3 different nodes is just for clarity -- highlighting that `Client 2` doesn't require, e.g., `yubihsm-shell`, and that `Client 1` doesn't need, e.g., `yubihsm_pkcs11.so`, and so on.
+* The native libraries (green), the connector (purple), and `Client 1` (blue) are included in the [YubiHSM2 SDK](https://developers.yubico.com/YubiHSM2/Releases/).
+* An advantage of using the [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11) to communicate with an HSM is interoperability. Therefore, it doesn't matter what exactly is behind the PKCS#11 interface since it can be easily replaced without affecting the application implementation.
 
 ## YubiHSM Connector
 
-From the developer portal at Yubi website:
+From the developer portal at Yubico website:
 
 > The Connector is not a trusted component. Sessions are established cryptographically between the application and the YubiHSM 2 using a symmetric mutual authentication scheme that is both encrypted and authenticated.
 
-An important aspect about connectivity is also highlighted at the Yubico developer's website:
+An important aspect about connectivity, also highlighted at the Yubico developer's website:
 
 > The Connector is not required to run on the same host as the applications which access it. In that case the Connector should be configured to be listening on a different address and port rather than the default localhost:12345, making sure that the client has access.
 
-Install:
+To install:
 
 ```shell
 yubihsm-connector install
 ```
 
-Then, to start it:
+Then, start it:
 
 ```shell
 sudo yubihsm-connector --config yubihsm-connector-config.yaml start
 ```
 
-You might want to check if the `yubihsm-connector` is successfully running by using `curl`:
+Check if the `yubihsm-connector` is running successfully using `curl`:
 
 ```shell
 curl -v http://localhost:12345/connector/status
 ```
 
-You should see something like this with a `HTTP 200` response:
+You should see something like this, with a `HTTP 200` response:
 
 ```conf
 status=OK
@@ -119,13 +119,13 @@ port=12345
 
 ## Useful commands
 
-* Start the `yubihsm-shell` in the interactive mode:
+* Start the `yubihsm-shell` (interactive mode):
 
   ```shell
   yubihsm-shell
   ```
 
-  Then you can connect and create a session:
+  Connect and create a session:
 
   ```
   yubihsm> connect
@@ -134,7 +134,7 @@ port=12345
   Created session 0
   ```
 
-  Then, you can, for example, list all objects:
+  Then, for example, list all objects:
 
   ```
   yubihsm> list objects 0
@@ -142,36 +142,36 @@ port=12345
   id: 0x0001, type: authentication-key, algo: aes128-yubico-authentication, sequence: 0, label: DEFAULT AUTHKEY CHANGE THIS ASAP
   ```
 
-* You can also run the `yubihsm-shell` in a non-interactive mode, specifying what you want todo (e.g., actions) directly in the command line:
+* You might want to run the `yubihsm-shell` non-interactively, specifying actions directly in the command line:
 
   ```shell
   yubihsm-shell --authkey=1 --password=password --outformat=hex --action=list-objects
   ```
 
-## Scenario for key set-up
+## Scenario for Key Setup
 
-Let's imagine that you just bought the YubiHSM2 FIPS and would like to set-up the following:
+Imagine that you just bought the YubiHSM2 FIPS and want to set-up the following:
 
 - Generate an asymmetric key (secp256r1) that will never leave the HSM
 - Enable this key to sign data
 
-> 🚨**IMPORTANT**🚨: it's important to read [Core Concepts](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html) before you start. Make sure you understand what is an [Object](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#object-id), [Capability](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#capability) (including "Delegated Capabilities"), and [Domain](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#domain).
+> 🚨**IMPORTANT**🚨: it'd save lots of time if you read [Core Concepts](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html) before starting. Make sure you understand what an [Object](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#object-id), [Capability](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#capability) (including "Delegated Capabilities"), and [Domain](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-core-concepts.html#domain) are.
 
 ### Setting up a new Authentication Key
 
-Set-up a new auth key:
+Set up a new auth key:
 
 ```shell
 yubihsm-shell --authkey 1 --password password --outformat base64 -a put-authentication-key -i 0x0002 -l hsm-go-test -d 2 -c generate-asymmetric-key,export-wrapped,get-pseudo-random,put-wrap-key,import-wrapped,delete-asymmetric-key,sign-ecdsa --delegated sign-ecdsa,exportable-under-wrap,export-wrapped,import-wrapped --new-password newpassword123
 ```
 
 Details:
-* `-i 0x0002`: we're setting, by ourselves, the identifier of the object to `0x0002`. If you leave the `-i` param as  `0`, then a new one will be automatically assigned for you.
-* `-d 2`: means that this authentication key is valid in the domain `2`.
+* `-i 0x0002`: we're setting the identifier of the object to `0x0002`. If you leave the `-i` param as `0`, a new one will be automatically assigned.
+* `-d 2`: indicates this authentication key is only valid in domain `2`.
 
-> 🚨**IMPORTANT**🚨: the default authentication key (id: `0x0001`) should be deleted.
+> 🚨**IMPORTANT**🚨: delete the default authentication key (id: 0x0001) when configuring productive environments.
 
-### Generate a key for signing & signning data
+### Generate a Key for Signing
 
 Generate the key (`ecdsa`, `secp256r1`):
 
@@ -185,39 +185,39 @@ Returns:
 Generated Asymmetric key 0x13db
 ```
 
-List all the objects (just to check if the key was created):
+List all the objects (to check if the key was created):
 
 ```shell
 yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a list-objects
 ```
 
-Sign the data from the `data.txt` file (and output to `signature.b64`):
+Sign the data from the `data.txt` file (and output the signature to `signature.b64` file):
 
 ```shell
 cat data.txt | yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a sign-ecdsa -i 0x13db -A ecdsa-sha256
 ```
 
-Get public key (and output to `asymmetric_key.pub`):
+Get the public key (and output result to the `asymmetric_key.pub` file):
 
 ```shell
 yubihsm-shell --authkey 2 --password newpassword123 --outformat base64 -a get-public-key -i 0x13db > asymmetric_key.pub
 ```
 
-Convert the `signature.b64` to a binary format using `base64` cmd tool, and output to `signature.bin`:
+Convert the `signature.b64` file to a binary format using `base64` command-line tool, and output the result to the `signature.bin` file:
 
-  * If you're in MacOS:
+  * If you're on MacOS:
   
     ```shell
     base64 -d -i signature.b64 > signature.bin
     ```
 
-  * If you're in Linux:
+  * If you're on Linux:
 
     ```shell
     base64 -d signature.b64 > signature.bin
     ```
 
-Verify the signature (from `signature.bin`) using `openssl`:
+Verify the signature (from `signature.bin` file) using `openssl`:
 
 ```shell
 openssl dgst -sha256 -signature signature.bin -verify asymmetric_key.pub data.txt
@@ -225,9 +225,9 @@ openssl dgst -sha256 -signature signature.bin -verify asymmetric_key.pub data.tx
 
 ## Signing using the Golang code
 
-Make sure you take a look at the `.env.template` and the `const` section of the `main.go` file. If you would like to change any default value, the easiest way is to create a `.env` file and just override the varibales you need. All the others will get the default value.
+Ensure you review the `.env.template` and the `const` section of the `main.go` file. To change any default values, the easiest approach is to create a `.env` file and override the variables you need. All other values will use the defaults.
 
-The Golang example code uses [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11).
+The Golang example code uses the [PKCS#11 standard](https://en.wikipedia.org/wiki/PKCS_11).
 
 Run:
 
@@ -235,27 +235,29 @@ Run:
 go run main.go
 ```
 
-In summary, this is what `main.go` does:
-- List all objects (keys)
-- Fetch the private key object (i.e., object identifier)
-- Test whether the private key value can be fetched (nooooo! 😅)
-- Fetch the public key object (i.e., object identifier)
-- Prints the public key (hex and base64)
-- Requests a signature to the HSM (using `data.txt`)
-- Prints the signature (hex and base64)
+In summary, here's what `main.go` does:
+- Lists all objects (keys)
+- Fetches the private key object (i.e., object identifier)
+- Tests whether the private key value can be fetched (nooooo! 😅)
+- Fetches the public key object (i.e., object identifier)
+- Prints the public key (in hex and base64)
+- Requests a signature from the HSM (using `data.txt` file)
+- Prints the signature (in hex and base64)
 - Prints the curve based on the public key
 - Verifies the signature based on the public key ✅ 🥳
 
-> 🚨**IMPORTANT**🚨: DO NOT USE THIS CODE IN PRODUCTION. This is just an example and was done in the "quick and dirty" mode. 😅
+> 🚨**IMPORTANT**🚨:
+> DO NOT USE THIS CODE IN PRODUCTION. PLEASE.
+> This is just an example and was created in the "quick and dirty" mode. 😅
 
 ## TODOs
 
-- [ ] Clarify what's the best set-up in terms of auth key, audit key, and wrap key. Maybe a superior set-up is to have 3 keys with different roles.
-- [ ] Clarify what's the best way to set-up the wrap key and backups.
-- [ ] Docker image with all the tools from yubihsm SDK
+- [ ] Clarify the optimal setup in terms of auth key, audit key, and wrap key. A superior setup might involve having 3 keys with distinct roles.
+- [ ] Determine the best approach for setting up the wrap key and managing backups.
+- [ ] Create a Docker image containing all the tools from the YubiHSM SDK.
 
 ## Acknowledgements and References
 
-Some parts of this README were strongly based on the [user guide](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-quick-start.html) provided by Yubico. They have well-written docs, no doubts. However, by re-writing some steps -- which are already part of the docs, but in a scattered manner -- made me better digest and explain details more clearly. I hope that's also the case for you. 😉
+Parts of this README were heavily inspired and based on the [user guide](https://docs.yubico.com/hardware/yubihsm-2/hsm-2-user-guide/hsm2-quick-start.html) provided by Yubico. Their documentation is exceptionally well-written. Rewriting some of the steps, which are scattered throughout their documentation, helped me better understand and clarify the details. I hope it does the same for you. 😉
 
-Also, thanks for [AxLabs](https://axlabs.com) to provide me the opportunity to play with an YubiHSM2 FIPS. 🙏🥳
+While this project was pursued during my free time, I'd like to extend special thanks to [AxLabs](https://axlabs.com) and [NGD](https://neo.org) for providing me with the opportunity to experiment with the YubiHSM2 FIPS hardware. 🙏🥳
