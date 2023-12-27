@@ -16,25 +16,42 @@ import (
 )
 
 const (
-	authKeyObjId       = "0002"
-	authKeyPassword    = "newpassword123"
-	asymmetricKeyLabel = "hsm-go-test-key1"
-	dataFilePath       = "./data.txt"
+	defaultLibPath            = "/usr/local/Cellar/p11-kit/0.25.3/lib/pkcs11/yubihsm_pkcs11.dylib"
+	defaultAuthKeyObjId       = "0002"
+	defaultAuthKeyPassword    = "newpassword123"
+	defaultAsymmetricKeyLabel = "hsm-go-test-key1"
+	defaultDataFilePath       = "./data.txt"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		panic("Error loading .env file")
-	}
+	// Load the .env file, and ignore the error if it doesn't exist
+	_ = godotenv.Load()
 
-	libPath := os.Getenv("PKCS11_LIB_PATH")
-	if libPath == "" {
-		panic("PKCS11_LIB_PATH is not set")
+	// Check if the environment variables are set.
+	// If not, use the default values (from the const).
+	libPath, exists := os.LookupEnv("PKCS11_LIB_PATH")
+	if !exists {
+		libPath = defaultLibPath
+	}
+	authKeyObjId, exists := os.LookupEnv("AUTH_KEY_OBJ_ID")
+	if !exists {
+		authKeyObjId = defaultAuthKeyObjId
+	}
+	authKeyPassword, exists := os.LookupEnv("AUTH_KEY_PASSWORD")
+	if !exists {
+		authKeyPassword = defaultAuthKeyPassword
+	}
+	asymmetricKeyLabel, exists := os.LookupEnv("ASYMMETRIC_KEY_LABEL")
+	if !exists {
+		asymmetricKeyLabel = defaultAsymmetricKeyLabel
+	}
+	dataFilePath, exists := os.LookupEnv("DATA_FILE_PATH")
+	if !exists {
+		dataFilePath = defaultDataFilePath
 	}
 
 	p := pkcs11.New(libPath)
-	err = p.Initialize()
+	err := p.Initialize()
 	if err != nil {
 		panic(err)
 	}
@@ -194,8 +211,9 @@ func main() {
 	}
 
 	publicKeyValue := getPubKeyAttrValue[0].Value
+	publicKeyValueBase64 := base64.StdEncoding.EncodeToString(publicKeyValue)
 	fmt.Printf("Public Key in Hex: %s\n", hex.EncodeToString(publicKeyValue))
-	fmt.Printf("Public Key in Base64: %s\n", base64.StdEncoding.EncodeToString(publicKeyValue))
+	fmt.Printf("Public Key in Base64: %s\n", publicKeyValueBase64)
 
 	// Read the data file to be signed
 	data, err := os.ReadFile(dataFilePath)
@@ -220,7 +238,7 @@ func main() {
 	fmt.Printf("Signature in Base64: %s\n", base64.StdEncoding.EncodeToString(signature))
 
 	// Parse the public key
-	pubKey, err := parseECPublicKeyFromBytes(publicKeyValue)
+	pubKey, err := parseECPublicKeyFromBase64(publicKeyValueBase64)
 	if err != nil {
 		panic(err)
 	}
