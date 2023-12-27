@@ -1,6 +1,8 @@
 # Go example for YubiHSM2 FIPS
 
-This repo lays the groundwork for setting up and interacting with the [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) using [Golang](https://go.dev/). It also documents architectural trade-offs and technical challenges.
+This repo lays the groundwork for setting up and interacting with the [YubiHSM2 FIPS](https://www.yubico.com/products/hardware-security-module/) using [Golang](https://go.dev/). It also documents architectural trade-offs and technical challenges encountered during the process.
+
+The YubiHSM2 FIPS, recognized for its [cost-effectiveness](https://www.yubico.com/ch/product/yubihsm-2-series/yubihsm-2-fips/), small form-factor, and extensive developer & community features, is a certified device adhering to the stringent [Federal Information Processing Standards (FIPS)]((https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards)). This certification underscores its reliability and security, making it a good choice for many applications (e.g., blockchain validators, filesystem encryption, etc).
 
  ## What the heck is an HSM?
 
